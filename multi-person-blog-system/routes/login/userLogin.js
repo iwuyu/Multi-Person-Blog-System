@@ -11,18 +11,21 @@ let timer2 = {}; // 保存验证码时长定时器
 // 验证用户是否为登录状态
 userIsLogined = (req,res) => {
   let {token} = req.body;
+  console.log(token)
   Jwt
   .verifyToken(token) // 将前台传来的token进行解析
   .then(data => {
     if (data.token.username) {
       return res.json({ 
-        statusCode: 0, 
-        message: "欢迎小可爱回哦来！" 
+        statusCode: 200, 
+        message: "欢迎小可爱回哦来！",
+        data: data.token.username
       });
     } else {
       return res.json({ 
-        statusCode: -999, 
-        message: "您还没有登录,快去登录吧！" 
+        statusCode: 700, 
+        message: "您还没有登录,快去登录吧！",
+        data:"登录注册" 
       });
     }
  }).catch(err => {
@@ -35,9 +38,10 @@ userIsLogined = (req,res) => {
 
 // 用户退出
 userExit = (req,res) => {
-  req.session.destroy();
-  res.json({ 
-    statusCode: 0, 
+  let {token} = req.body;
+  console.log(token)
+  return res.json({ 
+    statusCode: 200, 
     message: "拜拜，下次见！" 
   });
 }
@@ -45,7 +49,12 @@ userExit = (req,res) => {
 // 用户登录
 userLogin = (req,res) => {
   const { username,password } = req.body;
-  const sql = "SELECT * FROM user WHERE username = ? AND password = ?";
+  let sql = ""
+  if(username.indexOf("@qq.com") > 0 || username.indexOf("@163.com")> 0){
+    sql = "SELECT * FROM user WHERE email = ? AND password = ?";
+  }else{
+    sql = "SELECT * FROM user WHERE username = ? AND password = ?"
+  }
   let sqlArr = [username, password];
   let userLoginCallBack = (err,data) => {
     if(err) {
@@ -55,14 +64,16 @@ userLogin = (req,res) => {
       });
     }else {
       if(data.length > 0){
+        let _username = data[0].username
+        let _id = data[0].id
         // 存在
         /* 登陆成功 我们直接就生成一个token给的用户传递过去 */
-        const token = Jwt.createToken({ username: username, login: true });
-        req.session.userlogin = true;
+        const token = Jwt.createToken({ username: _username,id: _id});
         let user = {};
-        user.name = data[0].username;
-        user.avatar = data[0].head_image;
-        user.nick = data[0].nick_name;
+        user.id = _id
+        user.name = _username;
+        user.avatar = data[0].avatar;
+        // user.nick = data[0].nick_name;
         user.token = token;
         res.send({
           statusCode:200,

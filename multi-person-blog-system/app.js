@@ -23,7 +23,7 @@ app.use(logger('dev'));
 
 /* 跨域 开发模式 */
 app.use(cors({
-  origin:['http://172.17.143.169:8080','http://localhost:8080'], //http://172.17.143.169:8080
+  origin:['http://172.17.56.4:8080','http://localhost:8080'], //http://172.17.143.169:8080
   credentials: true
 }));
 

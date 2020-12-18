@@ -11,7 +11,11 @@ function verifyToken(token) {
     });
   });
 }
+function destroyToken(token) {
+  return JWT.destroy(token)
+}
 module.exports = {
   createToken,
   verifyToken,
+  destroyToken
 };
