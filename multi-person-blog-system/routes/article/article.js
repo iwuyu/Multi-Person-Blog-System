@@ -29,28 +29,48 @@ articlePublish = (req, res) => {
   .verifyToken(token) // 将前台传来的token进行解析
   .then(data => {
     let author = data.token.id
-    let date = Date.parse(new Date());
-    const sql = "INSERT INTO article(title, image, describes, category_id, label_id, content, time, author_id) VALUES(?, ?, ?, ?, ?, ?, ?, ?);";
-    let sqlArr = [title, image, describe, category, label, content, date, author];
-    let articlePublishCallBack = (err) => {
-      if (!err) {
-        // 发表成功
+    const sql0 = "SELECT ban FROM USER WHERE id = ?" 
+    const sqlArr0 = [author];
+    getUserStatus = (err,data) => {
+      console.log(data)
+      if(!err){
+        if(Number(data[0].ban) === 0) {
+          let date = Date.parse(new Date());
+          const sql = "INSERT INTO article(title, image, describes, category_id, label_id, content, time, author_id) VALUES(?, ?, ?, ?, ?, ?, ?, ?);";
+          let sqlArr = [title, image, describe, category, label, content, date, author];
+          let articlePublishCallBack = (err) => {
+            if (!err) {
+              // 发表成功
+              return res.json({
+                statusCode: 200,
+                message: "发表成功"
+              });
+            } else {
+              // 发表失败
+              let paths = image.split("/");
+              let path = paths[paths.length -1];
+              deleteImage('images',path);
+              return res.json({
+                statusCode: 400,
+                message: "出错了，请检查网络设备是否正常"
+              });
+            }
+          }
+          dbConfig.sqlConnect(sql, sqlArr, articlePublishCallBack)
+        }else {
+          return res.json({
+            statusCode: 500,
+            message: "您已被禁言，请联系管理员！"
+          });
+        }
+      }else {
         return res.json({
-          statusCode: 200,
-          message: "发表成功"
-        });
-      } else {
-        // 发表失败
-        let paths = image.split("/");
-        let path = paths[paths.length -1];
-        deleteImage('images',path);
-        return res.json({
-          statusCode: 400,
+          statusCode: 900,
           message: "出错了，请检查网络设备是否正常"
         });
       }
     }
-    dbConfig.sqlConnect(sql, sqlArr, articlePublishCallBack)
+    dbConfig.sqlConnect(sql0, sqlArr0, getUserStatus)
   })
 };
 
@@ -95,31 +115,31 @@ getLabel = (req,res) => {
   dbConfig.sqlConnect(sql,getLabelCallBack)
 }
 
-/* 查询商品总数量 */
+/* 查询文章总数量 */
 /**
  * 4个参数
  */
 getArticlesCount = (req,res) => {
-  const { categoryId,labelId, keyword, author } = req.query
+  const { categoryId,labelId, keyword, author,articleStatus } = req.query
     let sqlArr;
     let sql;
     if(keyword == ""){
       if(categoryId == "") {
-        sql = author ? `SELECT COUNT(*) AS count FROM article WHERE author_id = ?`:`SELECT COUNT(*) AS count FROM article`
-        sqlArr = [author]
+        sql = author ? `SELECT COUNT(*) AS count FROM article WHERE author_id = ? AND reviewed = ?`:`SELECT COUNT(*) AS count FROM article WHERE reviewed = ?`
+        sqlArr= author ? [author,articleStatus]:[articleStatus]
       }else {
         if(labelId === ""){
-          sql = author ? `SELECT COUNT(*) AS count FROM article WHERE category_id = ? AND author_id = ?`:`SELECT COUNT(*) AS count FROM article WHERE category_id = ?`
-          sqlArr = [categoryId,author];
+          sql = author ? `SELECT COUNT(*) AS count FROM article WHERE category_id = ? AND author_id = ? AND reviewed = ?`:`SELECT COUNT(*) AS count FROM article WHERE category_id = ? AND reviewed = ?`
+          sqlArr = author ? [categoryId,author,articleStatus] : [categoryId,articleStatus];
         }else {
-          sql = author ? `SELECT COUNT(*) AS count FROM article WHERE label_id = ? AND author_id = ?`:`SELECT COUNT(*) AS count FROM article WHERE label_id = ?`
-          sqlArr = [labelId,author];
+          sql = author ? `SELECT COUNT(*) AS count FROM article WHERE label_id = ? AND author_id = ? AND reviewed = ?`:`SELECT COUNT(*) AS count FROM article WHERE label_id = ? AND reviewed = ?`
+          sqlArr = author ? [labelId,author,articleStatus] : [labelId,articleStatus];
         }
       }
     }else {
-      sql = author ? `SELECT COUNT(*) AS count FROM article WHERE title LIKE ? AND  author_id = ?`:`SELECT COUNT(*) AS count FROM article WHERE title LIKE ?`
+      sql = author ? `SELECT COUNT(*) AS count FROM article WHERE title LIKE ? AND  author_id = ? AND reviewed = ?`:`SELECT COUNT(*) AS count FROM article WHERE title LIKE ? AND reviewed = ?`
       let keywords = `%${keyword}%`
-      sqlArr = [keywords,author];
+      sqlArr = author ? [keywords,author,articleStatus] : [keywords,articleStatus];
     }
     callBack = (err, data) => {
       if(!err){
@@ -145,7 +165,7 @@ getArticlesCount = (req,res) => {
  * author=*  : 查询用户id为*的文章
  */
 getArticle = (req,res) => {
-  const {categoryId,labelId,keyword,currentPage,pageSize, author} = req.query;
+  const {categoryId,labelId,keyword,currentPage,pageSize, author, articleStatus} = req.query;
   let categoryId1  = parseInt(categoryId);
   let labelId1  = parseInt(labelId);
   let currentPage1 = (currentPage - 1) * pageSize;
@@ -157,53 +177,53 @@ getArticle = (req,res) => {
       if(!labelId){
         sql = author ? `SELECT article.*,label.label_name,category.category_name,user.username 
                FROM article,label,category,user 
-               WHERE article.label_id = label.label_id AND article.category_id = category.category_id AND article.author_id = user.id AND article.author_id = ? ORDER BY article.id DESC LIMIT ?,?`:
+               WHERE article.label_id = label.label_id AND article.category_id = category.category_id AND article.author_id = user.id AND article.author_id = ? AND article.reviewed = ? ORDER BY article.id DESC LIMIT ?,?`:
                `SELECT article.*,label.label_name,category.category_name,user.username 
                FROM article,label,category,user 
-               WHERE article.label_id = label.label_id AND article.category_id = category.category_id AND article.author_id = user.id ORDER BY article.id DESC LIMIT ?,?`
-        sqlArr= author ? [author,currentPage1,pageSize1]:[currentPage1,pageSize1]
+               WHERE article.label_id = label.label_id AND article.category_id = category.category_id AND article.author_id = user.id AND article.reviewed = ? ORDER BY article.id DESC LIMIT ?,?`
+        sqlArr= author ? [author,articleStatus,currentPage1,pageSize1]:[articleStatus,currentPage1,pageSize1]
       }else {
         sql = author ? `SELECT article.*,label.label_name,category.category_name,user.username  
                FROM article,label,category,user  
-               WHERE article.label_id = label.label_id AND article.category_id = category.category_id AND article.author_id = user.id AND article.author_id = ? AND article.label_id = ? ORDER BY article.id DESC LIMIT ?,?`:
+               WHERE article.label_id = label.label_id AND article.category_id = category.category_id AND article.author_id = user.id AND article.author_id = ? AND article.label_id = ? AND article.reviewed = ? ORDER BY article.id DESC LIMIT ?,?`:
                `SELECT article.*,label.label_name,category.category_name,user.username  
                FROM article,label,category,user  
-               WHERE article.label_id = label.label_id AND article.category_id = category.category_id AND article.author_id = user.id AND article.label_id = ? ORDER BY article.id DESC LIMIT ?,?`
-        sqlArr= author ? [author,labelId1,currentPage1,pageSize1]:[labelId1,currentPage1,pageSize1]
+               WHERE article.label_id = label.label_id AND article.category_id = category.category_id AND article.author_id = user.id AND article.label_id = ? AND article.reviewed = ? ORDER BY article.id DESC LIMIT ?,?`
+        sqlArr= author ? [author,labelId1,articleStatus,currentPage1,pageSize1]:[labelId1,articleStatus,currentPage1,pageSize1]
       }
     }else {
       if(!labelId1){
         sql = author ? `SELECT article.*,label.label_name,category.category_name,user.username  
                FROM article,label,category,user   
-               WHERE article.label_id = label.label_id AND article.category_id = category.category_id AND article.author_id = user.id AND article.author_id = ? AND article.category_id = ? ORDER BY article.id DESC LIMIT ?,?`:
+               WHERE article.label_id = label.label_id AND article.category_id = category.category_id AND article.author_id = user.id AND article.author_id = ? AND article.category_id = ? AND article.reviewed = ? ORDER BY article.id DESC LIMIT ?,?`:
                `SELECT article.*,label.label_name,category.category_name,user.username  
                FROM article,label,category,user   
-               WHERE article.label_id = label.label_id AND article.category_id = category.category_id AND article.author_id = user.id AND article.category_id = ? ORDER BY article.id DESC LIMIT ?,?`
-        sqlArr= author ? [author,categoryId1,currentPage1,pageSize1]:[categoryId1,currentPage1,pageSize1]
+               WHERE article.label_id = label.label_id AND article.category_id = category.category_id AND article.author_id = user.id AND article.category_id = ? AND article.reviewed = ? ORDER BY article.id DESC LIMIT ?,?`
+        sqlArr= author ? [author,categoryId1,articleStatus,currentPage1,pageSize1]:[categoryId1,articleStatus,currentPage1,pageSize1]
       }else {
         sql = author ? `SELECT article.*,label.label_name,category.category_name,user.username  
                FROM article,label,category,user  
-               WHERE article.label_id = label.label_id AND article.category_id = category.category_id AND article.author_id = user.id AND article.author_id = ? AND article.label_id = ? ORDER BY article.id DESC LIMIT ?,?`:
+               WHERE article.label_id = label.label_id AND article.category_id = category.category_id AND article.author_id = user.id AND article.author_id = ? AND article.label_id = ? AND article.reviewed = ? ORDER BY article.id DESC LIMIT ?,?`:
                `SELECT article.*,label.label_name,category.category_name,user.username  
                FROM article,label,category,user  
-               WHERE article.label_id = label.label_id AND article.category_id = category.category_id AND article.author_id = user.id AND article.label_id = ? ORDER BY article.id DESC LIMIT ?,?`
-        sqlArr= author ? [author,labelId1,currentPage1,pageSize1]:[labelId1,currentPage1,pageSize1]
+               WHERE article.label_id = label.label_id AND article.category_id = category.category_id AND article.author_id = user.id AND article.label_id = ? AND article.reviewed = ? ORDER BY article.id DESC LIMIT ?,?`
+        sqlArr= author ? [author,labelId1,articleStatus,currentPage1,pageSize1]:[labelId1,articleStatus,currentPage1,pageSize1]
       }
     }
   }else {
     sql = author ? `SELECT article.*,label.label_name,category.category_name,user.username  
            FROM article,label,category,user   
-           WHERE article.label_id = label.label_id AND article.category_id = category.category_id AND article.author_id = user.id AND article.author_id = ? AND article.title LIKE ? ORDER BY article.id DESC LIMIT ?,?`:
+           WHERE article.label_id = label.label_id AND article.category_id = category.category_id AND article.author_id = user.id AND article.author_id = ? AND article.title LIKE ? AND article.reviewed = ? ORDER BY article.id DESC LIMIT ?,?`:
            `SELECT article.*,label.label_name,category.category_name,user.username  
            FROM article,label,category,user   
-           WHERE article.label_id = label.label_id AND article.category_id = category.category_id AND article.author_id = user.id AND article.title LIKE ? ORDER BY article.id DESC LIMIT ?,?`
+           WHERE article.label_id = label.label_id AND article.category_id = category.category_id AND article.author_id = user.id AND article.title LIKE ? AND article.reviewed = ? ORDER BY article.id DESC LIMIT ?,?`
     let keywords = `%${keyword}%`;
-    sqlArr = author ? [author,keywords,currentPage1,pageSize1]:[keywords,currentPage1,pageSize1]
+    sqlArr = author ? [author,keywords,articleStatus,currentPage1,pageSize1]:[keywords,articleStatus,currentPage1,pageSize1]
   }
   let getArticleCallBack = (err,data) => {
     if(!err){
       data.forEach(item => {
-        item.time = Date1.getTime(item.time,"YMD");
+        item.time = articleStatus == 1 ? Date1.getTime(item.time,"YMD") : Date1.getTime(item.time,"YMDhm");
       })
       return res.json({
         statusCode: 200,
@@ -270,32 +290,120 @@ updataArticle = (req, res) => {
   })
 };
 
+// 删除文章
+deleteArticle = (req,res) => {
+  const {token,articleId,image} = req.body
+  Jwt
+  .verifyToken(token) // 将前台传来的token进行解析
+  .then(data => {
+    if(data.token.id > 0){
+      const sql = "DELETE FROM article WHERE id = ?";
+      let sqlArr = [articleId];
+      let deleteArticleCallBack = err => {
+        if(!err){
+          // 删除成功
+          // 删除该文章的图片
+          deleteImage('images',image);
+          const sql0 = "SELECT id FROM comment WHERE parent_id = ?"
+          let getMessageIdCallBack = (err,data) => {
+            data.forEach((item,index) => {
+              const sql2 = "SELECT * FROM reply WHERE grand_id = ?";
+              let sqlArr1 = [item.id];
+              let getReplyCallBack = (err,data1) => {
+                if (!err) {
+                  // 查询成功
+                    // 有回复，一起删除
+                    let sql1;
+                    data1.length > 0 ? sql1 = "DELETE comment,reply FROM comment INNER JOIN reply ON comment.id = reply.grand_id WHERE comment.id = ?" : sql1 = "DELETE FROM comment WHERE id = ?"
+                    // console.log(sql1)
+                    let deleteMessageCallBack = err => {
+                      if(!err){
+                        if(index == data.length - 1){
+                          // 删除成功
+                          return res.json({
+                            statusCode: 200,
+                            message: "删除成功"
+                          }); 
+                        }
+                      }else {
+                        console.log('全部执行并失败')
+                        // 删除失败
+                        return res.json({
+                          statusCode: 900,
+                          message: "出错了，请检查网络设备是否正常!"
+                        });
+                      }
+                    }
+                    dbConfig.sqlConnect(sql1, sqlArr1, deleteMessageCallBack) // 有回复，一起删除
+                }else {
+                  // 查询失败
+                  return res.json({
+                    statusCode: 900,
+                    message: "出错了，请检查网络设备是否正常!"
+                  });
+                }
+              }
+              dbConfig.sqlConnect(sql2, sqlArr1, getReplyCallBack)
+            })
+          } 
+          dbConfig.sqlConnect(sql0, sqlArr, getMessageIdCallBack) //查询留言id
+        }else {
+          // 删除失败
+          return res.json({
+            statusCode: 900,
+            message: "出错了，请检查网络设备是否正常!"
+          });
+        }
+      }
+      dbConfig.sqlConnect(sql, sqlArr, deleteArticleCallBack)
+    } else {
+      return res.json({
+        statusCode: 500,
+        message: "您们没有权限，请登录后再来吧!"
+      });
+    }
+  })
+}
+
 /** 审核文章
- * 文章字段reviewed
+ * status
  * 0 : 未审核
  * 1 : 审核通过
  * 2 : 审核不通过
 */ 
 reviewedArticle = (req, res) => {
-  const { id, status } = req.body
-  const sql = 'UPDATE article SET reviewed = ? WHERE id = ?'
-  const sqlArr = [status, id]
-  let reviewedCallBack = (err) => {
-    if (!err) {
-      // 审核成功
-      return res.json({
-        statusCode: 200,
-        message: "审核成功"
-      });
-    } else {
-      // 审核失败
-      return res.json({
-        statusCode: 900,
-        message: "出错了，请检查网络设备是否正常!"
-      });
+  if(req.session.adminlogin) {
+    // 管理员已登录
+    const {status,articleId} = req.body
+    const sql = "UPDATE article SET reviewed = ? where id = ?"
+    const sqlArr = [status,articleId]
+    let reviewArticleCallBack = err => {
+      if(err){
+        return res.json({
+          statusCode: 900,
+          message: "出错了，请检查网络设备是否正常"
+        });
+      }else{
+        if(status === 1){
+          return res.json({
+            statusCode: 200,
+            message: '该文章审核已通过'
+          });
+        }else {
+          return res.json({
+            statusCode: 200,
+            message: '该文章审核不通过'
+          });
+        }
+      }
     }
+    dbConfig.sqlConnect(sql, sqlArr, reviewArticleCallBack)
+  } else {
+    return res.json({
+      statusCode: 500,
+      message: '对不起，您没有权限哦！'
+    });
   }
-  dbConfig.sqlConnect(sql, sqlArr, reviewedCallBack)
 }
 
 /**
@@ -433,6 +541,7 @@ getComment = (req,res) => {
 }
 
 
+
 module.exports = {
   articlePublish,
   getCategory,
@@ -443,5 +552,6 @@ module.exports = {
   reviewedArticle,
   getArticleDetail,
   leaveComment,
-  getComment
+  getComment,
+  deleteArticle
 }
