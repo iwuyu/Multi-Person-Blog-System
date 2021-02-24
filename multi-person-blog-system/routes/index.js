@@ -4,6 +4,7 @@ var router = express.Router()
 let userLogin = require('./login/userLogin')
 let login = require('./login/login')
 let article = require('./article/article')
+let question = require('./question/question')
 let user = require('./user/user')
 let file = require('./file/file')
 
@@ -58,14 +59,26 @@ router.get('/article/detail',article.getArticleDetail)
 /* 文章封面图 */
 router.post('/article/images', file.upload.single('images'),file.uploadCallBack);
 
+/* 文章内容图 */
+router.post('/article/articleImages', file.upload.single('articleImages'),file.uploadCallBack);
+
 /* 删除图片 */
 router.post('/removeFile', file.removeFile);
 
 /* 审核文章 */
 router.post('/article/reviewed', article.reviewedArticle);
 
+/* 文章点赞 */
+router.post('/article/like', article.articleLike);
+
 /* 留言 */
 router.post('/comment/leaveComment', article.leaveComment);
+
+/* 删除留言 */
+router.post('/comment/deteleComment', article.deteleComment);
+
+/* 判断是否有留言 */
+router.get('/comment/hasComment', article.hasComment);
 
 /* 获取留言 */
 router.get('/comment/getComment', article.getComment);
@@ -75,5 +88,32 @@ router.get('/getUsers', user.getUsers);
 
 /* 修改用户禁言状态 */ 
 router.post('/changeStatus', user.changeStatus);
+
+/* 个人信息 */ 
+router.get('/getUserInfo', user.getUserInfo);
+
+/* 获取问答标签 */ 
+router.get('/question/getQuestionlabel', question.getQuestionLabel);
+
+/* 问答发布 */ 
+router.post('/question/publish', question.questionPublish);
+
+/* 问答删除 */ 
+router.post('/question/delete', question.deleteQuestion);
+
+/* 获取问答 */ 
+router.get('/question/getQuestion', question.getQuestion);
+
+/* 获取问答数量 */ 
+router.get('/question/getquestionsCount', question.getquestionsCount);
+
+/* 获取问答详情 */ 
+router.get('/question/getQuestionDetail', question.getQuestionDetail);
+
+/* 文章点赞 */
+router.post('/question/like', question.questionLike);
+
+/* 个人信息 */ 
+router.get('/getOtherInfo', user.getOtherInfo);
 
 module.exports = router

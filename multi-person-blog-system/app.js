@@ -11,6 +11,16 @@ var usersRouter = require("./routes/users");
 
 var app = express();
 
+// session 生成
+app.use(
+  session({
+    secret: "dsakljfldkjflkjgfdjg", //密钥
+    cookie: { maxAge: 60 * 1000 * 120 }, //过期时间两小时
+    resave: true,
+    saveUninitialized: true,
+  })
+);
+
 const bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
@@ -24,18 +34,8 @@ app.use(logger("dev"));
 /* 跨域 开发模式 */
 app.use(
   cors({
-    origin: ["http://192.168.1.110:8080", "http://localhost:8080"],
+    origin: ["http://192.168.31.29:8080", "http://localhost:8080"],
     credentials: true,
-  })
-);
-
-// session 生成
-app.use(
-  session({
-    secret: "dsakljfldkjflkjgfdjg", //密钥
-    cookie: { maxAge: 60 * 1000 * 120 }, //过期时间两小时
-    resave: true,
-    saveUninitialized: true,
   })
 );
 
