@@ -2,6 +2,7 @@ var dbConfig = require('../../serve/dbConfig')
 const Jwt = require("../utils/jsonwebtoken")
 const fs = require('fs')
 const Date1 = require('../utils/time');
+const { addMessage,getTargetType,getTargetAuthor } = require('../utils/message') //s
 
 // 删除文章图片/音乐
 deleteImage = (type,path) =>{
@@ -419,9 +420,9 @@ reviewedArticle = (req, res) => {
 
 /** 文章点赞 */
 articleLike = (req,res) => {
-  const {articleId} = req.body;
+  const {articleId,author} = req.body;
   // 1.查询原有赞数
-  const sql = "SELECT likes FROM article WHERE id = ?";
+  const sql = "SELECT likes,author_id FROM article WHERE id = ?";
   let sqlArr = [articleId];
   let articleLikeCallBack = (err,data) => {
     if(err) {
@@ -430,6 +431,7 @@ articleLike = (req,res) => {
         message: "出错了，请检查网络设备是否正常!"
       });
     }else {
+      let author_id = data[0].author_id
       let articleLikes = data[0].likes + 1;
       const sql2 = "UPDATE article SET likes = ? WHERE id = ?"
       let sqlArr2 = [articleLikes,articleId];
@@ -440,6 +442,11 @@ articleLike = (req,res) => {
             message: "出错了，请检查网络设备是否正常!"
           });
         }else {
+          // type_name,author_id,initiator_id,goal_id,reply describes, TIME, goal_type
+          const time = Date.parse(new Date());
+          let sqlArray = ["博客",author_id,author,articleId,'点赞了你的文章',time,1] 
+          // console.log(sqlArray); 
+          addMessage(sqlArray)
           return res.json({
             statusCode: 200,
             message: "点赞成功~ 太棒了"
@@ -487,11 +494,12 @@ getArticleDetail = (req,res) => {
   dbConfig.sqlConnect(sql,sqlArr,getArticleDetailCallBack)   
 }
 
+
 /**
  * 评论
  */
 leaveComment = (req,res) => {
-  const { parentId, type, content, token, isReply} = req.body;
+  const { parentId, type, content, grandId, parentUser, token, isReply} = req.body;
   console.log(req.body)
   Jwt
   .verifyToken(token) // 将前台传来的token进行解析
@@ -500,19 +508,36 @@ leaveComment = (req,res) => {
     const time = Date.parse(new Date());
     let sql;
     let sqlArr;
-    isReply?sql = 'INSERT INTO reply(parent_id, content, user_id, time, type, grand_id, parent_user_id) VALUES(?, ?, ?, ?, ?, ?, ?)':sql = 'INSERT INTO comment(parent_id, content, user_id, time, type) VALUES(?, ?, ?, ?, ?)'
-    isReply ? sqlArr = [parentId,content,author,time,type,req.body.grandId,req.body.parentUser] : sqlArr = [parentId,content,author,time,type]
-    let commentCallBack = err => {
+    isReply?sql = 'INSERT INTO reply(parent_id, content, user_id, time, type_num, grand_id, parent_user_id) VALUES(?, ?, ?, ?, ?, ?, ?)':sql = 'INSERT INTO comment(parent_id, content, user_id, time, type_num) VALUES(?, ?, ?, ?, ?)'
+    isReply ? sqlArr = [parentId,content,author,time,type,grandId,parentUser] : sqlArr = [parentId,content,author,time,type]
+    
+     async function commentCallBack(err)  {
       if(err){
         return res.json({
           statusCode: 900,
           message: "出错了，请检查网络设备是否正常"
         });
       }else{
-        return res.json({
-          statusCode: 200,
-          message: '恭喜你留言成功'
-        });
+        // type_name,author_id,initiator_id,goal_id,reply describes, TIME, goal_type
+        let target,targetAuthor
+        if(isReply) {
+          target = await getTargetType(grandId)
+        }else {
+          targetAuthor = await getTargetAuthor(parentId,type)
+        }
+
+        // setTimeout(()=> {
+          let typeName = isReply ? (target.type === 1 ? "博客" : "问答") : (type === 1 ? "博客" : "问答")
+        
+          let sqlArray 
+          sqlArray = isReply ? [typeName,parentUser,author,target.targetId,'评论了你的评论',time,target.type] : [typeName,targetAuthor,author,parentId,'评论了你的文章',time,type]
+          // console.log(sqlArray);
+          addMessage(sqlArray)
+          return res.json({
+            statusCode: 200,
+            message: '恭喜你留言成功'
+          });
+        // },2000)
       }
     }
     dbConfig.sqlConnect(sql, sqlArr, commentCallBack)
@@ -553,7 +578,7 @@ getComment = (req,res) => {
   if(id){
     const sql = `SELECT comment.*,user.username,user.avatar
                  FROM comment,user
-                 WHERE comment.user_id = user.id AND comment.parent_id = ? AND comment.type = ?`
+                 WHERE comment.user_id = user.id AND comment.parent_id = ? AND comment.type_num = ?`
     const sqlArr = [id, type]
     let getCommentCallBack = (err,data) => {
       if(!err){
@@ -622,7 +647,7 @@ deteleComment = (req,res) => {
       if (!err) {
         if(data[0].author_id === author){
           // 文章作者是本人，允许删除
-          const sql1 = "SELECT * FROM reply WHERE parent_id = ? AND type = 1";
+          const sql1 = "SELECT * FROM reply WHERE parent_id = ? AND type_num = 1";
           let sqlArr1 = [commentId];
           let deleteMessageCallBack = (err,data) => {
             if (!err) {

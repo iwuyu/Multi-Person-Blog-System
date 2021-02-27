@@ -65,6 +65,13 @@ uploadCallBack = (req,res) => {
       message: "上传成功",
       data:url
     });
+  }else if(req.file.fieldname == 'letterImage') {
+    let url = `/public/letterImage/${req.file.filename}`
+    return res.json({ 
+      statusCode: 200, 
+      message: "上传成功",
+      data:url
+    });
   }else {
     fileDelete(req.file.path)
     return res.json({ 

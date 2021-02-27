@@ -5,6 +5,7 @@ let userLogin = require('./login/userLogin')
 let login = require('./login/login')
 let article = require('./article/article')
 let question = require('./question/question')
+let letter = require('./letter/letter')
 let user = require('./user/user')
 let file = require('./file/file')
 
@@ -92,6 +93,12 @@ router.post('/changeStatus', user.changeStatus);
 /* 个人信息 */ 
 router.get('/getUserInfo', user.getUserInfo);
 
+/* 获取个人消息 */ 
+router.get('/getUserMessage', user.getUserMessage);
+
+/* 删除个人消息 */ 
+router.post('/deleteUserMessage', user.deleteUserMessage);
+
 /* 获取问答标签 */ 
 router.get('/question/getQuestionlabel', question.getQuestionLabel);
 
@@ -110,10 +117,25 @@ router.get('/question/getquestionsCount', question.getquestionsCount);
 /* 获取问答详情 */ 
 router.get('/question/getQuestionDetail', question.getQuestionDetail);
 
-/* 文章点赞 */
+/* 问答点赞 */
 router.post('/question/like', question.questionLike);
 
-/* 个人信息 */ 
+/* 获取私信用户列表 */
+router.get('/letter/getLetterList', letter.getLetterList);
+
+/* 获取私信用户列表 */
+router.get('/letter/getLetter', letter.getLetter);
+
+/* 私信发言 */
+router.post('/letter/speakWord', letter.speakWord);
+
+/* 私信内容图 */
+router.post('/letter/letterImage', file.upload.single('letterImage'),file.uploadCallBack);
+
+/* 私信删除 */
+router.post('/letter/deleteLetter', letter.deleteLetter);
+
+/* 他人信息 */ 
 router.get('/getOtherInfo', user.getOtherInfo);
 
 module.exports = router

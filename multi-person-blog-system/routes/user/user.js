@@ -117,7 +117,6 @@ getUserInfo = (req,res) => {
   .verifyToken(token) // 将前台传来的token进行解析
   .then(data => {
     let userId = data.token.id
-    // const sql = 'SELECT id, username, ban, email, register_time, avatar FROM user WHERE id = ?';
     const sql = 'SELECT u.id, u.username, u.ban, u.email, u.register_time, u.avatar, a.article_count,q.question_count FROM USER AS u, (SELECT COUNT(*) AS article_count FROM article WHERE reviewed = 1 AND author_id = ?)AS a,(SELECT COUNT(*) AS question_count FROM question WHERE author_id = ?)AS q WHERE u.id = ?';
     let sqlArr = [userId,userId,userId];
     getUserInfoCallBack = (err, data) => {
@@ -139,10 +138,73 @@ getUserInfo = (req,res) => {
   })
 } 
 
+// 获取个人消息
+getUserMessage = (req,res) => {
+  const { token } = req.query;
+  Jwt
+  .verifyToken(token) // 将前台传来的token进行解析
+  .then(data => {
+    let userId = data.token.id
+    const sql = `SELECT m.*,u.username,
+                 CASE WHEN m.goal_type = 1 THEN 
+                 (SELECT title FROM article WHERE id = m.goal_id) 
+                 WHEN m.goal_type = 2 THEN 
+                 (SELECT title FROM question WHERE id = m.goal_id) 
+                 END AS goal_title
+                 FROM message AS m,USER AS u
+                 WHERE m.initiator_id = u.id AND m.author_id = ? ORDER BY m.id DESC 
+                `;
+    let sqlArr = [userId];
+    getUserMessageCallBack = (err, data) => {
+      if(!err){
+        data.forEach(item => {
+          item.time = Date1.getTime(item.time,"YMDhms")
+        })
+        return res.json({
+          statusCode: 200,
+          message: "查询成功",
+          data
+        });
+      }else{
+        return res.json({
+          statusCode: 900,
+          message: "出错了，请检查网络设备是否正常!"
+        });
+      }
+    }
+    dbConfig.sqlConnect(sql,sqlArr,getUserMessageCallBack);
+  })
+}
+
+// 删除个人消息
+deleteUserMessage = (req,res) => {
+  const { token, messageId } = req.body;
+  Jwt
+  .verifyToken(token) // 将前台传来的token进行解析
+  .then(data => {
+    // let userId = data.token.id
+    const sql = `DELETE FROM message WHERE id = ?`;
+    let sqlArr = [messageId];
+    deleteUserMessageCallBack = (err) => {
+      if(!err){
+        return res.json({
+          statusCode: 200,
+          message: "删除成功"
+        });
+      }else{
+        return res.json({
+          statusCode: 900,
+          message: "出错了，请检查网络设备是否正常!"
+        });
+      }
+    }
+    dbConfig.sqlConnect(sql,sqlArr,deleteUserMessageCallBack);
+  })
+}
+
 // 获取对方信息
 getOtherInfo = (req,res) => {
   const { userId } = req.query;
-  // const sql = 'SELECT id, username, ban, email, register_time, avatar FROM user WHERE id = ?';
   const sql = 'SELECT u.id, u.username, u.ban, u.email, u.register_time, u.avatar, a.article_count,q.question_count FROM USER AS u, (SELECT COUNT(*) AS article_count FROM article WHERE reviewed = 1 AND author_id = ?)AS a,(SELECT COUNT(*) AS question_count FROM question WHERE author_id = ?)AS q WHERE u.id = ?';
   let sqlArr = [userId,userId,userId];
   getOtherInfoCallBack = (err, data) => {
@@ -167,5 +229,7 @@ module.exports = {
   getUsers,
   changeStatus,
   getUserInfo,
+  getUserMessage,
+  deleteUserMessage,
   getOtherInfo
 }

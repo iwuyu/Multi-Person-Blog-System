@@ -78,7 +78,12 @@ getTime = (data,type) => {
     m = m < 10 ? "0" + m : m;
     s = s < 10 ? "0" + s : s;
     return `${Y}-${M}-${D} ${h}:${m}`
-  }else{
+  }else if(type=="YMDhms"){
+    M = M < 10 ? "0" + M : M;
+    D = D < 10 ? "0" + D : D;
+    h = h < 10 ? "0" + h : h;
+    m = m < 10 ? "0" + m : m;
+    s = s < 10 ? "0" + s : s;
     return `${Y}-${M}-${D} ${h}:${m}:${s}`
   }
 }

@@ -2,6 +2,7 @@ var dbConfig = require('../../serve/dbConfig')
 const Jwt = require("../utils/jsonwebtoken")
 const fs = require('fs')
 const Date1 = require('../utils/time');
+const { addMessage } = require('../utils/message') 
 
 /* 获取问答标签 */
 getQuestionLabel = (req,res) => {
@@ -226,7 +227,7 @@ getQuestion = (req,res) => {
     if(!err){
       data.forEach((item,index) => {
         item.time = Date1.getTime(item.time,"YMDhm");
-        const sql1 = 'SELECT COUNT(*) AS comment_count FROM COMMENT WHERE parent_id = ? and type = 2'
+        const sql1 = 'SELECT COUNT(*) AS comment_count FROM COMMENT WHERE parent_id = ? and type_num = 2'
         const sqlArr1 = [item.id]
         let getCommentCallBack = (err,data1) => {
           item.comment_count = data1[0].comment_count
@@ -284,11 +285,11 @@ getQuestionDetail = (req,res) => {
   dbConfig.sqlConnect(sql,sqlArr,getQuestionDetailCallBack)   
 }
 
-/** 文章点赞 */
+/** 问答点赞 */
 questionLike = (req,res) => {
-  const {questionId} = req.body;
+  const {questionId,author} = req.body;
   // 1.查询原有赞数
-  const sql = "SELECT likes FROM question WHERE id = ?";
+  const sql = "SELECT likes,author_id FROM question WHERE id = ?";
   let sqlArr = [questionId];
   let questionLikeCallBack = (err,data) => {
     if(err) {
@@ -297,7 +298,8 @@ questionLike = (req,res) => {
         message: "出错了，请检查网络设备是否正常!"
       });
     }else {
-      let questionLikes = data[0].likes + 1;
+      let questionLikes = data[0].likes + 1
+      let author_id = data[0].author_id
       const sql2 = "UPDATE question SET likes = ? WHERE id = ?"
       let sqlArr2 = [questionLikes,questionId];
       let updataQuestionLikesCallBack = (err) => {
@@ -307,6 +309,10 @@ questionLike = (req,res) => {
             message: "出错了，请检查网络设备是否正常!"
           });
         }else {
+          const time = Date.parse(new Date());
+          let sqlArray = ["问答",author_id,author,questionId,'点赞了你的问题',time,2] 
+          console.log(sqlArray); 
+          addMessage(sqlArray)
           return res.json({
             statusCode: 200,
             message: "点赞成功~ 太棒了"
@@ -318,6 +324,8 @@ questionLike = (req,res) => {
   }
   dbConfig.sqlConnect(sql,sqlArr,questionLikeCallBack)
 }
+
+
 
 module.exports = {
   getQuestionLabel,

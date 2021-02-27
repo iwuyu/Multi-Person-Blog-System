@@ -34,7 +34,7 @@ app.use(logger("dev"));
 /* 跨域 开发模式 */
 app.use(
   cors({
-    origin: ["http://192.168.31.29:8080", "http://localhost:8080"],
+    origin: ["http://192.168.31.30:8080", "http://localhost:8080"],
     credentials: true,
   })
 );
