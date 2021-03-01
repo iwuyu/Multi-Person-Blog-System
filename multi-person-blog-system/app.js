@@ -9,7 +9,18 @@ var cors = require("cors");
 var indexRouter = require("./routes/index");
 var usersRouter = require("./routes/users");
 
+
 var app = express();
+
+let server = require('http').Server(app)
+var io = require('socket.io')(server,{cors:true});
+server.listen(8081)
+require('./routes/utils/socketIO')(io)
+
+// io.on('connection', (socket) => {
+//   console.log('一个用户链接成功');
+//   socket.emit('hi',)
+// });
 
 // session 生成
 app.use(
@@ -34,9 +45,10 @@ app.use(logger("dev"));
 /* 跨域 开发模式 */
 app.use(
   cors({
-    origin: ["http://192.168.31.30:8080", "http://localhost:8080"],
+    origin: ["http://192.168.37.30:8080", "http://localhost:8080"],
     credentials: true,
-  })
+  }
+  )
 );
 
 app.use(express.json());

@@ -12,7 +12,7 @@ async function getTargetAuthorInfo(id) {
       if(err) {
         reject('获取评论的目标作者失败');
       }else {
-        console.log('他的里',data[0]);
+        // console.log('他的里',data[0]);
         resolve(data[0])
       }
     }
@@ -28,7 +28,7 @@ async function getAuthorInfo(id) {
       if(err) {
         reject('获取评论的目标作者失败');
       }else {
-        console.log('我的里',data[0]);
+        // console.log('我的里',data[0]);
         resolve(data[0])
       }
     }
@@ -53,7 +53,7 @@ getLetterList = (req , res) => {
           userLists.push(targetInfo)
         }
         let authorInfo = await getAuthorInfo(author)
-        console.log('我的外',authorInfo);
+        // console.log('我的外',authorInfo);
         const data = {}
         data.userLists = userLists
         data.author = authorInfo
@@ -76,7 +76,7 @@ getLetterList = (req , res) => {
 // 获取私信内容
 getLetter = (req , res) => {
   const { token,targetId } = req.query
-  console.log(req.query);
+  // console.log(req.query);
   Jwt
   .verifyToken(token) // 将前台传来的token进行解析
   .then(data => {

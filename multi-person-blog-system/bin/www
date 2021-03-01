@@ -8,6 +8,22 @@ var app = require('../app');
 var debug = require('debug')('multi-person-blog-system:server');
 var http = require('http');
 
+// let serve = http.Server(app)
+// let io = require('socket.io')(serve)
+// // var serve = app.listen(3001)
+// // var io = require('socket.io')(serve);
+// io.on('connection', (socket) => {
+//   console.log('一个用户链接成功');
+//   // socket.emit('hisadasdasdad',)
+//   socket.on('chat message',(msg) => {
+//     console.log('chat message',msg);
+//     io.emit('chat message111111111',msg)
+//   })
+// });
+// serve.listen(3001,()=> {
+//   console.log(3001);
+// })
+
 /**
  * Get port from environment and store in Express.
  */

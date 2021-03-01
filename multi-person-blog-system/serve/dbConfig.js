@@ -15,7 +15,8 @@ module.exports = {
     pool.getConnection((err,conn) => {
       if(err) {
         console.log('链接失败,请重新链接！');
-        return;
+        // return
+        sqlConnect(sql,sqlArr,callback)
       }
       // 事件驱动回调
       conn.query(sql,sqlArr,callback);
